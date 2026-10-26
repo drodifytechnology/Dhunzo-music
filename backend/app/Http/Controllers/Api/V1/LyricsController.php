@@ -20,7 +20,9 @@ class LyricsController extends Controller
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title'       => 'required|string|min:1|max:255',
+            'title'       => 'required_without_all:url,youtube_url|nullable|string|max:255',
+            'url'         => 'nullable|string|max:1024',
+            'youtube_url' => 'nullable|string|max:1024',
             'artist'      => 'nullable|string|max:255',
             'album'       => 'nullable|string|max:255',
             'duration'    => 'nullable|integer|min:1',
@@ -28,13 +30,34 @@ class LyricsController extends Controller
             'audio_url'   => 'nullable|url|max:1024',
         ]);
 
-        $title = $validated['title'];
+        $title = $validated['title'] ?? null;
         $artist = $validated['artist'] ?? null;
         $album = $validated['album'] ?? null;
+        $audioUrl = $validated['audio_url'] ?? null;
+        $youtubeUrl = $validated['url'] ?? ($validated['youtube_url'] ?? null);
+
+        if (empty($title) && !empty($youtubeUrl)) {
+            $parsed = $this->resolveYouTubeMetadata($youtubeUrl);
+            $title = $parsed['title'] ?? null;
+            if (empty($artist) && !empty($parsed['artist'])) {
+                $artist = $parsed['artist'];
+            }
+            if (empty($audioUrl)) {
+                $audioUrl = $youtubeUrl;
+            }
+        }
+
+        if (empty($title)) {
+            return ApiResponse::error(
+                code: ApiResponse::ERR_INVALID_REQUEST,
+                message: 'A song title or valid YouTube URL is required.',
+                status: 422
+            );
+        }
+
         $duration = isset($validated['duration'])
             ? (int) $validated['duration']
             : (isset($validated['duration_ms']) ? (int) round($validated['duration_ms'] / 1000) : null);
-        $audioUrl = $validated['audio_url'] ?? null;
 
         $lyrics = $this->lyricsService->search($title, $artist, $album, $duration, $audioUrl);
 
@@ -83,5 +106,35 @@ class LyricsController extends Controller
                 'type'     => $lyrics->type,
             ]
         );
+    }
+
+    /**
+     * Resolve YouTube video title and author via oEmbed API.
+     */
+    protected function resolveYouTubeMetadata(string $url): array
+    {
+        try {
+            $oembedUrl = 'https://www.youtube.com/oembed?url=' . urlencode($url) . '&format=json';
+            $ctx = stream_context_create(['http' => ['timeout' => 4]]);
+            $json = @file_get_contents($oembedUrl, false, $ctx);
+            if ($json) {
+                $data = json_decode($json, true);
+                $rawTitle = $data['title'] ?? '';
+                $artist = $data['author_name'] ?? null;
+                if (str_contains($rawTitle, '-')) {
+                    $parts = explode('-', $rawTitle);
+                    $songPart = trim($parts[0]);
+                    $artistPart = trim(end($parts));
+                    $cleanSong = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $songPart));
+                    if (!empty($cleanSong)) $rawTitle = $cleanSong;
+                    if (!empty($artistPart)) $artist = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $artistPart));
+                } else {
+                    $rawTitle = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $rawTitle));
+                }
+                return ['title' => $rawTitle, 'artist' => $artist];
+            }
+        } catch (\Throwable $e) {}
+
+        return ['title' => null, 'artist' => null];
     }
 }
