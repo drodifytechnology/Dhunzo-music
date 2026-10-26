@@ -692,7 +692,7 @@
             <div class="search-bar">
                 <div class="input-wrapper">
                     <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="song-input" value="Kesariya" placeholder="যেকোনো গানের নাম বা লিঙ্ক দিন (যেমন: Kesariya, Believer, Lollypop Lagelu বা YouTube লিঙ্ক)...">
+                    <input type="text" id="song-input" value="Kesariya" placeholder="যেকোনো গানের নাম বা লিঙ্ক দিন (যেমন: Kesariya, Believer, UP Wali Laiki, Bojhena Shey Bojhena)...">
                 </div>
                 <button class="btn-primary" id="search-btn">
                     <span>Play & Sync Lyrics</span>
@@ -707,8 +707,8 @@
                 <span class="preset-chip" onclick="handleSearchOrPlay('Kesariya')">❤️ Kesariya (Arijit Singh)</span>
                 <span class="preset-chip" onclick="handleSearchOrPlay('Believer')">⚡ Believer (Imagine Dragons)</span>
                 <span class="preset-chip" onclick="handleSearchOrPlay('Lollypop Lagelu')">💃 Lollypop Lagelu (Pawan Singh)</span>
-                <span class="preset-chip" onclick="handleSearchOrPlay('https://youtu.be/D0YkgCt_MgA')">🔥 UP Wali Laiki (YouTube)</span>
-                <span class="preset-chip" onclick="handleSearchOrPlay('https://youtube.com/watch?v=8S2YggHf42s')">🎵 Hay Re Hoth Lali (Bhojpuri)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('UP Wali Laiki')">🔥 UP Wali Laiki (Nishant Mukta)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('Bojhena Shey Bojhena')">🎵 Bojhena Shey Bojhena (Bengali)</span>
             </div>
 
             <!-- Search Results Horizontal Tray -->
@@ -731,7 +731,12 @@
                     <span id="player-mode-icon">🎵</span>
                     <span id="player-mode-title">Live Playback</span>
                 </div>
-                <span id="player-time" style="font-family: monospace; font-size: 0.85rem; color: #34d399;">00:00 / 00:00</span>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <button id="btn-audio-fallback" onclick="triggerAudioFallback()" style="display:none; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; color: #34d399; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.6rem; cursor: pointer;">
+                        🎵 সরাসরি অডিওতে শুনুন
+                    </button>
+                    <span id="player-time" style="font-family: monospace; font-size: 0.85rem; color: #34d399;">00:00 / 00:00</span>
+                </div>
             </div>
 
             <!-- YouTube Video Wrapper (Mode 1) -->
@@ -823,6 +828,8 @@
         let currentLyricsLines = [];
         let timerInterval = null;
         let isScrubbing = false;
+        let currentRequestSeq = 0;
+        let lastResolvedMeta = { title: '', artist: '' };
 
         const html5Audio = document.getElementById('html5-audio');
         const audioScrubber = document.getElementById('audio-scrubber');
@@ -919,14 +926,13 @@
             console.warn('YouTube Player error code:', event.data);
             const syncInd = document.getElementById('sync-indicator');
             if (syncInd) {
-                syncInd.innerHTML = '<span style="color:#f87171">⚠️ ইউটিউব ভিডিও লোড করা যায়নি (ত্রুটি ' + event.data + ')</span>';
+                syncInd.innerHTML = '<span style="color:#f87171">⚠️ ইউটিউব প্লেয়ারে সমস্যা (Error ' + event.data + ')</span>';
             }
-            const inputVal = document.getElementById('song-input').value.trim();
-            if (inputVal.includes('DOYkgCt_MgA')) {
-                const fixedUrl = inputVal.replace('DOYkgCt_MgA', 'D0YkgCt_MgA');
-                document.getElementById('song-input').value = fixedUrl;
-                showNotice('💡 ভুল লিঙ্ক শনাক্ত: ইংরেজি "O" এর বদলে সংখ্যা "0" (D0YkgCt_MgA) দিয়ে ভিডিও প্লে করা হচ্ছে!');
-                handleSearchOrPlay(fixedUrl);
+
+            // YouTube error 150 or 101 means copyright owner disabled 3rd-party iframe embedding
+            if (event.data === 150 || event.data === 101 || event.data === 100 || event.data === 2) {
+                showNotice('💡 ইউটিউব কর্তৃপক্ষ এই ভিডিওটি এম্বেড করা সীমাবদ্ধ করেছে (Error ' + event.data + ')। স্বয়ংক্রিয়ভাবে সরাসরি অডিও স্ট্রিমে গানটি বাজানো হচ্ছে...');
+                triggerAudioFallback();
             }
         }
 
@@ -964,7 +970,9 @@
         function playNowAndSync() {
             if (currentMode === 'audio') {
                 if (html5Audio.paused) {
-                    html5Audio.play().catch(e => console.warn(e));
+                    html5Audio.play().then(() => onAudioStateChange(true)).catch(e => {
+                        console.warn('Audio play restricted by browser:', e);
+                    });
                 } else {
                     html5Audio.pause();
                 }
@@ -1059,14 +1067,26 @@
             }
         }
 
+        // Trigger Audio Fallback when YouTube fails or is requested
+        function triggerAudioFallback() {
+            const targetTitle = lastResolvedMeta.title || document.getElementById('display-title').innerText || 'Kesariya';
+            const targetArtist = lastResolvedMeta.artist || '';
+            const query = (targetTitle + ' ' + targetArtist).trim();
+            console.log('Switching to audio fallback stream for:', query);
+            searchSongsAndAutoPlay(query);
+        }
+
         // Smart Universal Search & Play Controller
         async function handleSearchOrPlay(queryOrUrl) {
+            let cleanQuery = (queryOrUrl || '').trim();
+            if (!cleanQuery) return;
+
+            // Immediately reflect selected query in the input box!
+            document.getElementById('song-input').value = cleanQuery;
+
             const btn = document.getElementById('search-btn');
             btn.innerHTML = '<span>Searching & Playing...</span> <span>⏳</span>';
             hideNotice();
-
-            let cleanQuery = queryOrUrl.trim();
-            if (!cleanQuery) return;
 
             // Auto-correct typo for YouTube ID
             if (cleanQuery.includes('DOYkgCt_MgA')) {
@@ -1080,7 +1100,7 @@
             if (cleanQuery.startsWith('http://') || cleanQuery.startsWith('https://')) {
                 if (videoId) {
                     // YouTube Mode
-                    playYouTubeMode(cleanQuery, videoId);
+                    await playYouTubeMode(cleanQuery, videoId);
                 } else {
                     // Direct Audio Stream URL Mode
                     playAudioDirectUrl(cleanQuery);
@@ -1094,13 +1114,15 @@
         }
 
         // Play YouTube Video Mode
-        function playYouTubeMode(url, videoId) {
+        async function playYouTubeMode(url, videoId) {
+            const reqSeq = ++currentRequestSeq;
             currentMode = 'youtube';
             html5Audio.pause();
 
             document.getElementById('yt-player-box').style.display = 'block';
             document.getElementById('audio-player-box').style.display = 'none';
             document.getElementById('search-results-tray').style.display = 'none';
+            document.getElementById('btn-audio-fallback').style.display = 'inline-block';
 
             document.getElementById('player-mode-icon').innerText = '🎬';
             document.getElementById('player-mode-title').innerText = 'YouTube Video Playback';
@@ -1109,12 +1131,14 @@
                 ytPlayer.loadVideoById(videoId);
             }
 
-            fetchLyrics('/api/v1/lyrics/search?url=' + encodeURIComponent(url));
+            await fetchLyrics('/api/v1/lyrics/search?url=' + encodeURIComponent(url), reqSeq);
         }
 
         // Direct Audio URL Mode
         function playAudioDirectUrl(url) {
             currentMode = 'audio';
+            const reqSeq = ++currentRequestSeq;
+
             if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
                 ytPlayer.stopVideo();
             }
@@ -1122,6 +1146,7 @@
             document.getElementById('yt-player-box').style.display = 'none';
             document.getElementById('audio-player-box').style.display = 'flex';
             document.getElementById('search-results-tray').style.display = 'none';
+            document.getElementById('btn-audio-fallback').style.display = 'none';
 
             document.getElementById('player-mode-icon').innerText = '🎵';
             document.getElementById('player-mode-title').innerText = 'Direct Audio Stream';
@@ -1129,31 +1154,36 @@
             html5Audio.src = url;
             html5Audio.play().catch(e => console.warn(e));
 
-            fetchLyrics('/api/v1/lyrics/search?audio_url=' + encodeURIComponent(url));
+            fetchLyrics('/api/v1/lyrics/search?audio_url=' + encodeURIComponent(url), reqSeq);
         }
 
         // Search songs via Central Gateway and Auto-Play #1 Top Match
         async function searchSongsAndAutoPlay(query) {
+            const reqSeq = ++currentRequestSeq;
             try {
                 const res = await fetch('/api/v1/search?query=' + encodeURIComponent(query));
                 const json = await res.json();
 
+                if (reqSeq !== currentRequestSeq) return; // Discard outdated requests
+
                 if (json.success && json.data && json.data.length > 0) {
-                    renderSearchResults(json.data);
+                    renderSearchResults(json.data, reqSeq);
                     // Automatically auto-play top match!
-                    playSelectedSong(json.data[0]);
+                    playSelectedSong(json.data[0], reqSeq);
                 } else {
                     // If Saavn search has no audio, search lyrics directly
                     document.getElementById('search-results-tray').style.display = 'none';
-                    fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query));
+                    fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query), reqSeq);
                 }
             } catch (err) {
                 console.error(err);
-                fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query));
+                if (reqSeq === currentRequestSeq) {
+                    fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query), reqSeq);
+                }
             }
         }
 
-        function renderSearchResults(songs) {
+        function renderSearchResults(songs, reqSeq) {
             const tray = document.getElementById('search-results-tray');
             const list = document.getElementById('song-results-list');
             const count = document.getElementById('results-count');
@@ -1169,7 +1199,7 @@
                 card.onclick = () => {
                     document.querySelectorAll('.song-card').forEach(c => c.classList.remove('active'));
                     card.classList.add('active');
-                    playSelectedSong(song);
+                    playSelectedSong(song, ++currentRequestSeq);
                 };
 
                 const imgUrl = song.artwork?.medium || song.artwork?.small || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200';
@@ -1186,7 +1216,8 @@
         }
 
         // Play Selected Song from Search with HiFi Audio and Auto-Sync Lyrics
-        function playSelectedSong(song) {
+        function playSelectedSong(song, reqSeq) {
+            if (reqSeq && reqSeq !== currentRequestSeq) return;
             activeSongData = song;
             currentMode = 'audio';
 
@@ -1196,6 +1227,7 @@
 
             document.getElementById('yt-player-box').style.display = 'none';
             document.getElementById('audio-player-box').style.display = 'flex';
+            document.getElementById('btn-audio-fallback').style.display = 'none';
 
             document.getElementById('player-mode-icon').innerText = '🎵';
             document.getElementById('player-mode-title').innerText = 'HiFi Audio Stream';
@@ -1207,6 +1239,8 @@
             const artists = (song.artists || []).map(a => a.name).join(', ') || song.subtitle || '';
             document.getElementById('display-artist').innerText = artists;
 
+            lastResolvedMeta = { title: song.title, artist: artists };
+
             document.getElementById('pill-provider').innerText = song.provider ? song.provider.toUpperCase() + '_HIFI' : 'SAAVN_HIFI';
             document.getElementById('pill-lang').innerText = 'Lang: ' + (song.language || 'hi').toUpperCase();
             document.getElementById('pill-cached').innerText = 'Direct HiFi Audio';
@@ -1214,7 +1248,10 @@
             // Start Audio Playback
             if (song.playback && song.playback.url) {
                 html5Audio.src = song.playback.url;
-                html5Audio.play().catch(e => console.warn(e));
+                html5Audio.play().then(() => onAudioStateChange(true)).catch(e => {
+                    console.warn('Playback paused pending user gesture:', e);
+                    onAudioStateChange(false);
+                });
             }
 
             // Fetch Synced Lyrics
@@ -1224,27 +1261,36 @@
             if (song.duration) lyricsApiUrl += '&duration=' + song.duration;
             if (song.playback && song.playback.url) lyricsApiUrl += '&audio_url=' + encodeURIComponent(song.playback.url);
 
-            fetchLyrics(lyricsApiUrl);
+            fetchLyrics(lyricsApiUrl, reqSeq);
         }
 
-        // Fetch Lyrics helper
-        async function fetchLyrics(apiUrl) {
+        // Fetch Lyrics helper with Request Sequence protection
+        async function fetchLyrics(apiUrl, reqSeq) {
             try {
                 const res = await fetch(apiUrl);
                 const json = await res.json();
 
+                if (reqSeq && reqSeq !== currentRequestSeq) {
+                    console.log('Ignored stale lyrics response for request:', reqSeq);
+                    return;
+                }
+
                 if (json.success && json.data) {
-                    renderLyrics(json.data, json.meta);
+                    renderLyrics(json.data, json.meta, reqSeq);
                 } else {
                     showError(json.error?.message || 'Lyrics not found');
                 }
             } catch (err) {
                 console.error(err);
-                showError('Could not connect to Lyrics API.');
+                if (!reqSeq || reqSeq === currentRequestSeq) {
+                    showError('Could not connect to Lyrics API.');
+                }
             }
         }
 
-        function renderLyrics(data, meta = {}) {
+        function renderLyrics(data, meta = {}, reqSeq) {
+            if (reqSeq && reqSeq !== currentRequestSeq) return;
+
             document.getElementById('empty-state').style.display = 'none';
             const container = document.getElementById('lyrics-lines-container');
             container.innerHTML = '';
@@ -1252,21 +1298,25 @@
             currentLyricsLines = data.lines || [];
             activeLyricIndex = -1;
 
-            // Update Track Metadata Title & Artist if not already updated by audio
+            const resolvedTitle = meta?.title || data.title || (data.extra && data.extra.title);
+            const resolvedArtist = meta?.artist || data.artist || (data.extra && data.extra.artist);
+
+            if (resolvedTitle) lastResolvedMeta.title = resolvedTitle;
+            if (resolvedArtist) lastResolvedMeta.artist = resolvedArtist;
+
+            // Update Track Metadata Title & Artist if in YouTube mode
             if (currentMode === 'youtube') {
                 const titleEl = document.getElementById('display-title');
                 const artistEl = document.getElementById('display-artist');
-                const resolvedTitle = meta?.title || data.title || (data.extra && data.extra.title);
-                const resolvedArtist = meta?.artist || data.artist || (data.extra && data.extra.artist);
 
                 if (titleEl && resolvedTitle) titleEl.innerText = resolvedTitle;
                 if (artistEl && resolvedArtist) artistEl.innerText = resolvedArtist;
             }
 
             // Update Metadata Header
-            document.getElementById('pill-provider').innerText = data.provider || 'ai_speech_to_text';
-            document.getElementById('pill-lang').innerText = 'Lang: ' + (data.language || 'bho').toUpperCase();
-            document.getElementById('pill-cached').innerText = data.extra?.persisted_db ? 'Saved in DB (Fast)' : 'AI Transcribed';
+            document.getElementById('pill-provider').innerText = (data.provider || 'ai_speech_to_text').toUpperCase();
+            document.getElementById('pill-lang').innerText = 'LANG: ' + (data.language || 'hi').toUpperCase();
+            document.getElementById('pill-cached').innerText = data.extra?.persisted_db ? 'SAVED IN DB (FAST)' : (currentMode === 'audio' ? 'DIRECT HIFI AUDIO' : 'AI TRANSCRIBED');
 
             // Populate Karaoke Lines
             currentLyricsLines.forEach((item, index) => {
