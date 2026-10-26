@@ -291,6 +291,178 @@
             border: none;
         }
 
+        /* Audio Stream Player Panel */
+        .audio-player-wrapper {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem 1.5rem;
+            background: radial-gradient(circle at center, rgba(30, 41, 59, 0.75) 0%, rgba(10, 14, 23, 0.95) 100%);
+            position: relative;
+            min-height: 280px;
+        }
+
+        .album-art-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin-bottom: 0.75rem;
+        }
+
+        .album-art-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.35);
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            transition: transform 0.5s ease;
+        }
+
+        .album-art-img.playing {
+            animation: spinAlbum 18s linear infinite;
+        }
+
+        @keyframes spinAlbum {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .equalizer-wave {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 22px;
+            margin: 0.4rem 0;
+        }
+
+        .wave-bar {
+            width: 4px;
+            background: linear-gradient(to top, #10b981, #6366f1);
+            border-radius: 2px;
+            height: 4px;
+            transition: height 0.15s ease;
+        }
+
+        .equalizer-wave.active .wave-bar:nth-child(1) { animation: bounceBar 0.8s ease-in-out infinite alternate; }
+        .equalizer-wave.active .wave-bar:nth-child(2) { animation: bounceBar 0.5s ease-in-out 0.2s infinite alternate; }
+        .equalizer-wave.active .wave-bar:nth-child(3) { animation: bounceBar 1.0s ease-in-out 0.4s infinite alternate; }
+        .equalizer-wave.active .wave-bar:nth-child(4) { animation: bounceBar 0.7s ease-in-out 0.1s infinite alternate; }
+        .equalizer-wave.active .wave-bar:nth-child(5) { animation: bounceBar 0.9s ease-in-out 0.3s infinite alternate; }
+
+        @keyframes bounceBar {
+            0% { height: 4px; }
+            100% { height: 22px; }
+        }
+
+        .audio-progress-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .progress-bar {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            cursor: pointer;
+        }
+
+        /* Search Results Tray */
+        .search-results-tray {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-glass);
+        }
+
+        .tray-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .song-results-list {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding: 0.5rem 0.25rem 0.75rem;
+            scrollbar-width: thin;
+        }
+
+        .song-card {
+            flex: 0 0 150px;
+            background: rgba(18, 24, 38, 0.85);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .song-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(26, 35, 54, 0.95);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .song-card.active {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .song-card-img {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #1e293b;
+        }
+
+        .song-card-title {
+            font-size: 0.825rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #fff;
+        }
+
+        .song-card-artist {
+            font-size: 0.725rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .track-metadata {
             padding: 1.25rem 1.5rem;
             display: flex;
@@ -520,7 +692,7 @@
             <div class="search-bar">
                 <div class="input-wrapper">
                     <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="song-input" value="https://youtube.com/watch?v=8S2YggHf42s" placeholder="Paste YouTube link or enter Song Title (e.g., Hay Re Hoth Lali)...">
+                    <input type="text" id="song-input" value="Kesariya" placeholder="যেকোনো গানের নাম বা লিঙ্ক দিন (যেমন: Kesariya, Believer, Lollypop Lagelu বা YouTube লিঙ্ক)...">
                 </div>
                 <button class="btn-primary" id="search-btn">
                     <span>Play & Sync Lyrics</span>
@@ -532,29 +704,57 @@
 
             <div class="presets">
                 <span>Quick Presets:</span>
-                <span class="preset-chip" onclick="loadPreset('https://youtu.be/D0YkgCt_MgA')">🔥 UP Wali Laiki (D0YkgCt_MgA)</span>
-                <span class="preset-chip" onclick="loadPreset('https://youtube.com/watch?v=8S2YggHf42s')">🎵 Hay Re Hoth Lali (Bhojpuri)</span>
-                <span class="preset-chip" onclick="loadPreset('Lollypop Lagelu')">💃 Lollypop Lagelu (Pawan Singh)</span>
-                <span class="preset-chip" onclick="loadPreset('Believer Imagine Dragons')">⚡ Believer (LRCLIB)</span>
-                <span class="preset-chip" onclick="loadPreset('Kesariya Arijit Singh')">❤️ Kesariya (Hindi)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('Kesariya')">❤️ Kesariya (Arijit Singh)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('Believer')">⚡ Believer (Imagine Dragons)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('Lollypop Lagelu')">💃 Lollypop Lagelu (Pawan Singh)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('https://youtu.be/D0YkgCt_MgA')">🔥 UP Wali Laiki (YouTube)</span>
+                <span class="preset-chip" onclick="handleSearchOrPlay('https://youtube.com/watch?v=8S2YggHf42s')">🎵 Hay Re Hoth Lali (Bhojpuri)</span>
+            </div>
+
+            <!-- Search Results Horizontal Tray -->
+            <div class="search-results-tray" id="search-results-tray" style="display:none;">
+                <div class="tray-header">
+                    <span>🎵 সার্চ রেজাল্ট (ক্লিক করলেই গান পরিবর্তন হয়ে প্লে হবে):</span>
+                    <span id="results-count" style="color: #10b981;"></span>
+                </div>
+                <div class="song-results-list" id="song-results-list"></div>
             </div>
         </div>
     </section>
 
     <!-- Studio Grid (Video Player on Left, Synced Lyrics on Right) -->
     <main class="studio-grid">
-        <!-- Left: YouTube Player -->
+        <!-- Left: YouTube Video & Audio Stream Player -->
         <div class="card">
             <div class="card-header">
                 <div class="card-title">
-                    <span>🎬</span>
-                    <span>Live Video / Audio Playback</span>
+                    <span id="player-mode-icon">🎵</span>
+                    <span id="player-mode-title">Live Playback</span>
                 </div>
                 <span id="player-time" style="font-family: monospace; font-size: 0.85rem; color: #34d399;">00:00 / 00:00</span>
             </div>
 
-            <div class="player-wrapper">
+            <!-- YouTube Video Wrapper (Mode 1) -->
+            <div class="player-wrapper" id="yt-player-box" style="display: none;">
                 <div id="youtube-player-frame"></div>
+            </div>
+
+            <!-- Audio Stream Wrapper (Mode 2) -->
+            <div class="audio-player-wrapper" id="audio-player-box" style="display: flex;">
+                <div class="album-art-container">
+                    <img id="audio-album-art" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop" alt="Album Art" class="album-art-img">
+                </div>
+                <div class="equalizer-wave" id="audio-wave">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                </div>
+                <div class="audio-progress-container">
+                    <input type="range" class="progress-bar" id="audio-scrubber" value="0" min="0" max="100" step="0.1">
+                </div>
+                <audio id="html5-audio" preload="auto"></audio>
             </div>
 
             <!-- Prominent Play & Sync Action Button -->
@@ -569,12 +769,12 @@
             </div>
 
             <div class="track-metadata">
-                <div class="track-title" id="display-title">Hay Re Hoth Lali [Bhojpuri Superhit]</div>
-                <div class="track-artist" id="display-artist">Chhotu Chhalia • T-Series Hamaar Bhojpuri</div>
+                <div class="track-title" id="display-title">Kesariya</div>
+                <div class="track-artist" id="display-artist">Pritam, Arijit Singh</div>
                 <div class="meta-pills" id="meta-pills">
-                    <span class="pill pill-provider" id="pill-provider">ai_speech_to_text</span>
-                    <span class="pill pill-lang" id="pill-lang">Language: Bhojpuri</span>
-                    <span class="pill pill-cached" id="pill-cached">Database Cached</span>
+                    <span class="pill pill-provider" id="pill-provider">saavn_hifi</span>
+                    <span class="pill pill-lang" id="pill-lang">Lang: HI</span>
+                    <span class="pill pill-cached" id="pill-cached">Direct HiFi Audio</span>
                 </div>
             </div>
         </div>
@@ -617,9 +817,15 @@
     <script>
         let ytPlayer = null;
         let isYtReady = false;
+        let currentMode = 'audio'; // 'audio' or 'youtube'
+        let activeSongData = null;
         let activeLyricIndex = -1;
         let currentLyricsLines = [];
         let timerInterval = null;
+        let isScrubbing = false;
+
+        const html5Audio = document.getElementById('html5-audio');
+        const audioScrubber = document.getElementById('audio-scrubber');
 
         // Extract YouTube Video ID from various URL formats
         function extractYouTubeId(url) {
@@ -629,23 +835,72 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
+        // HTML5 Audio Event Listeners
+        if (html5Audio) {
+            html5Audio.addEventListener('play', () => onAudioStateChange(true));
+            html5Audio.addEventListener('pause', () => onAudioStateChange(false));
+            html5Audio.addEventListener('ended', () => onAudioStateChange(false));
+            html5Audio.addEventListener('timeupdate', () => {
+                if (currentMode === 'audio') {
+                    const cur = html5Audio.currentTime || 0;
+                    const dur = html5Audio.duration || (activeSongData ? activeSongData.duration : 0);
+                    document.getElementById('player-time').innerText = 
+                        formatSeconds(cur) + ' / ' + formatSeconds(dur);
+
+                    if (!isScrubbing && dur > 0) {
+                        audioScrubber.value = (cur / dur) * 100;
+                    }
+                }
+            });
+            html5Audio.addEventListener('error', (e) => {
+                console.warn('Audio playback error:', e);
+                const syncInd = document.getElementById('sync-indicator');
+                if (syncInd) syncInd.innerHTML = '<span style="color:#f87171">⚠️ অডিও স্ট্রিমে সমস্যা হয়েছে</span>';
+            });
+        }
+
+        if (audioScrubber) {
+            audioScrubber.addEventListener('input', (e) => {
+                if (currentMode === 'audio' && html5Audio && html5Audio.duration) {
+                    isScrubbing = true;
+                    const targetSec = (e.target.value / 100) * html5Audio.duration;
+                    html5Audio.currentTime = targetSec;
+                    updateLyricsSync();
+                }
+            });
+            audioScrubber.addEventListener('change', () => {
+                isScrubbing = false;
+            });
+        }
+
+        function onAudioStateChange(isPlaying) {
+            const playBtn = document.getElementById('btn-play-trigger');
+            const syncInd = document.getElementById('sync-indicator');
+            const albumArt = document.getElementById('audio-album-art');
+            const wave = document.getElementById('audio-wave');
+
+            if (isPlaying) {
+                if (playBtn) playBtn.innerHTML = '<span>⏸ পজ করুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#10b981">● গান বাজছে ও লিরিক্স সিঙ্ক হচ্ছে</span>';
+                if (albumArt) albumArt.classList.add('playing');
+                if (wave) wave.classList.add('active');
+                startSyncLoop();
+            } else {
+                if (playBtn) playBtn.innerHTML = '<span>▶ গান প্লে করুন ও রিয়েল-টাইম লিরিক্স দেখুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#94a3b8">○ পজ করা হয়েছে</span>';
+                if (albumArt) albumArt.classList.remove('playing');
+                if (wave) wave.classList.remove('active');
+                stopSyncLoop();
+            }
+        }
+
         // YouTube IFrame API Callback
         function onYouTubeIframeAPIReady() {
             isYtReady = true;
-            initPlayer('8S2YggHf42s'); // Default to Hay Re Hoth Lali
-        }
-
-        function initPlayer(videoId) {
-            if (!isYtReady) return;
-            if (ytPlayer) {
-                ytPlayer.loadVideoById(videoId);
-                return;
-            }
-
             ytPlayer = new YT.Player('youtube-player-frame', {
                 height: '100%',
                 width: '100%',
-                videoId: videoId,
+                videoId: '8S2YggHf42s',
                 playerVars: {
                     'playsinline': 1,
                     'autoplay': 0,
@@ -654,8 +909,7 @@
                     'modestbranding': 1
                 },
                 events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
+                    'onStateChange': onYouTubeStateChange,
                     'onError': onPlayerError
                 }
             });
@@ -672,7 +926,22 @@
                 const fixedUrl = inputVal.replace('DOYkgCt_MgA', 'D0YkgCt_MgA');
                 document.getElementById('song-input').value = fixedUrl;
                 showNotice('💡 ভুল লিঙ্ক শনাক্ত: ইংরেজি "O" এর বদলে সংখ্যা "0" (D0YkgCt_MgA) দিয়ে ভিডিও প্লে করা হচ্ছে!');
-                fetchAndDisplayLyrics(fixedUrl);
+                handleSearchOrPlay(fixedUrl);
+            }
+        }
+
+        function onYouTubeStateChange(event) {
+            if (currentMode !== 'youtube') return;
+            const playBtn = document.getElementById('btn-play-trigger');
+            const syncInd = document.getElementById('sync-indicator');
+            if (event.data === YT.PlayerState.PLAYING) {
+                if (playBtn) playBtn.innerHTML = '<span>⏸ পজ করুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#10b981">● গান বাজছে ও লিরিক্স সিঙ্ক হচ্ছে</span>';
+                startSyncLoop();
+            } else {
+                if (playBtn) playBtn.innerHTML = '<span>▶ গান প্লে করুন ও রিয়েল-টাইম লিরিক্স দেখুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#94a3b8">○ পজ করা হয়েছে</span>';
+                stopSyncLoop();
             }
         }
 
@@ -691,39 +960,21 @@
             }
         }
 
-        function onPlayerReady(event) {
-            // Load initial lyrics for default track
-            fetchAndDisplayLyrics('https://youtube.com/watch?v=8S2YggHf42s');
-        }
-
-        function onPlayerStateChange(event) {
-            const playBtn = document.getElementById('btn-play-trigger');
-            const syncInd = document.getElementById('sync-indicator');
-            if (event.data === YT.PlayerState.PLAYING) {
-                if (playBtn) playBtn.innerHTML = '<span>⏸ পজ করুন</span>';
-                if (syncInd) syncInd.innerHTML = '<span style="color:#10b981">● গান বাজছে ও লিরিক্স সিঙ্ক হচ্ছে</span>';
-                startSyncLoop();
-                if (!currentLyricsLines || currentLyricsLines.length === 0) {
-                    const inputVal = document.getElementById('song-input').value.trim();
-                    fetchAndDisplayLyrics(inputVal || 'https://youtube.com/watch?v=8S2YggHf42s');
-                }
-            } else {
-                if (playBtn) playBtn.innerHTML = '<span>▶ গান প্লে করুন ও রিয়েল-টাইম লিরিক্স দেখুন</span>';
-                if (syncInd) syncInd.innerHTML = '<span style="color:#94a3b8">○ পজ করা হয়েছে</span>';
-                stopSyncLoop();
-            }
-        }
-
+        // Unified Play / Pause Master Button
         function playNowAndSync() {
-            if (!ytPlayer) return;
-            const state = (typeof ytPlayer.getPlayerState === 'function') ? ytPlayer.getPlayerState() : -1;
-            if (state === YT.PlayerState.PLAYING) {
-                ytPlayer.pauseVideo();
-            } else {
-                ytPlayer.playVideo();
-                if (!currentLyricsLines || currentLyricsLines.length === 0) {
-                    const inputVal = document.getElementById('song-input').value.trim();
-                    fetchAndDisplayLyrics(inputVal || 'https://youtube.com/watch?v=8S2YggHf42s');
+            if (currentMode === 'audio') {
+                if (html5Audio.paused) {
+                    html5Audio.play().catch(e => console.warn(e));
+                } else {
+                    html5Audio.pause();
+                }
+            } else if (currentMode === 'youtube') {
+                if (!ytPlayer || typeof ytPlayer.getPlayerState !== 'function') return;
+                const state = ytPlayer.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    ytPlayer.pauseVideo();
+                } else {
+                    ytPlayer.playVideo();
                 }
             }
         }
@@ -742,16 +993,22 @@
 
         // Real-time synchronization logic
         function updateLyricsSync() {
-            if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+            let currentTimeSec = 0;
+            let durationSec = 0;
 
-            const currentTimeSec = ytPlayer.getCurrentTime();
+            if (currentMode === 'audio') {
+                currentTimeSec = html5Audio.currentTime || 0;
+                durationSec = html5Audio.duration || (activeSongData ? activeSongData.duration : 0);
+            } else if (currentMode === 'youtube') {
+                if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                    currentTimeSec = ytPlayer.getCurrentTime() || 0;
+                    durationSec = ytPlayer.getDuration() || 0;
+                    document.getElementById('player-time').innerText = 
+                        formatSeconds(currentTimeSec) + ' / ' + formatSeconds(durationSec);
+                }
+            }
+
             const currentMs = currentTimeSec * 1000;
-            const durationSec = ytPlayer.getDuration() || 0;
-
-            // Update time display
-            document.getElementById('player-time').innerText = 
-                formatSeconds(currentTimeSec) + ' / ' + formatSeconds(durationSec);
-
             if (!currentLyricsLines || currentLyricsLines.length === 0) return;
 
             // Find current active line
@@ -786,22 +1043,32 @@
         }
 
         function seekTo(ms) {
-            if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
-                ytPlayer.seekTo(ms / 1000, true);
-                if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-                    ytPlayer.playVideo();
+            const sec = ms / 1000;
+            if (currentMode === 'audio') {
+                html5Audio.currentTime = sec;
+                if (html5Audio.paused) {
+                    html5Audio.play().catch(e => console.warn(e));
+                }
+            } else if (currentMode === 'youtube') {
+                if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+                    ytPlayer.seekTo(sec, true);
+                    if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+                        ytPlayer.playVideo();
+                    }
                 }
             }
         }
 
-        // Fetch lyrics from our Laravel API backend
-        async function fetchAndDisplayLyrics(queryOrUrl) {
+        // Smart Universal Search & Play Controller
+        async function handleSearchOrPlay(queryOrUrl) {
             const btn = document.getElementById('search-btn');
-            btn.innerHTML = '<span>Loading...</span> <span>⏳</span>';
+            btn.innerHTML = '<span>Searching & Playing...</span> <span>⏳</span>';
             hideNotice();
 
-            // Auto-correct common letter 'O' vs digit '0' in YouTube ID client-side
-            let cleanQuery = queryOrUrl;
+            let cleanQuery = queryOrUrl.trim();
+            if (!cleanQuery) return;
+
+            // Auto-correct typo for YouTube ID
             if (cleanQuery.includes('DOYkgCt_MgA')) {
                 cleanQuery = cleanQuery.replace('DOYkgCt_MgA', 'D0YkgCt_MgA');
                 document.getElementById('song-input').value = cleanQuery;
@@ -809,45 +1076,171 @@
             }
 
             const videoId = extractYouTubeId(cleanQuery);
+
+            if (cleanQuery.startsWith('http://') || cleanQuery.startsWith('https://')) {
+                if (videoId) {
+                    // YouTube Mode
+                    playYouTubeMode(cleanQuery, videoId);
+                } else {
+                    // Direct Audio Stream URL Mode
+                    playAudioDirectUrl(cleanQuery);
+                }
+                btn.innerHTML = '<span>Play & Sync Lyrics</span> <span>⚡</span>';
+            } else {
+                // Song Title / Artist Name Search Query
+                await searchSongsAndAutoPlay(cleanQuery);
+                btn.innerHTML = '<span>Play & Sync Lyrics</span> <span>⚡</span>';
+            }
+        }
+
+        // Play YouTube Video Mode
+        function playYouTubeMode(url, videoId) {
+            currentMode = 'youtube';
+            html5Audio.pause();
+
+            document.getElementById('yt-player-box').style.display = 'block';
+            document.getElementById('audio-player-box').style.display = 'none';
+            document.getElementById('search-results-tray').style.display = 'none';
+
+            document.getElementById('player-mode-icon').innerText = '🎬';
+            document.getElementById('player-mode-title').innerText = 'YouTube Video Playback';
+
             if (videoId && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
                 ytPlayer.loadVideoById(videoId);
             }
 
-            try {
-                let apiUrl = '/api/v1/lyrics/search?';
-                if (cleanQuery.startsWith('http://') || cleanQuery.startsWith('https://')) {
-                    apiUrl += 'url=' + encodeURIComponent(cleanQuery);
-                } else {
-                    apiUrl += 'title=' + encodeURIComponent(cleanQuery);
-                }
+            fetchLyrics('/api/v1/lyrics/search?url=' + encodeURIComponent(url));
+        }
 
+        // Direct Audio URL Mode
+        function playAudioDirectUrl(url) {
+            currentMode = 'audio';
+            if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
+                ytPlayer.stopVideo();
+            }
+
+            document.getElementById('yt-player-box').style.display = 'none';
+            document.getElementById('audio-player-box').style.display = 'flex';
+            document.getElementById('search-results-tray').style.display = 'none';
+
+            document.getElementById('player-mode-icon').innerText = '🎵';
+            document.getElementById('player-mode-title').innerText = 'Direct Audio Stream';
+
+            html5Audio.src = url;
+            html5Audio.play().catch(e => console.warn(e));
+
+            fetchLyrics('/api/v1/lyrics/search?audio_url=' + encodeURIComponent(url));
+        }
+
+        // Search songs via Central Gateway and Auto-Play #1 Top Match
+        async function searchSongsAndAutoPlay(query) {
+            try {
+                const res = await fetch('/api/v1/search?query=' + encodeURIComponent(query));
+                const json = await res.json();
+
+                if (json.success && json.data && json.data.length > 0) {
+                    renderSearchResults(json.data);
+                    // Automatically auto-play top match!
+                    playSelectedSong(json.data[0]);
+                } else {
+                    // If Saavn search has no audio, search lyrics directly
+                    document.getElementById('search-results-tray').style.display = 'none';
+                    fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query));
+                }
+            } catch (err) {
+                console.error(err);
+                fetchLyrics('/api/v1/lyrics/search?title=' + encodeURIComponent(query));
+            }
+        }
+
+        function renderSearchResults(songs) {
+            const tray = document.getElementById('search-results-tray');
+            const list = document.getElementById('song-results-list');
+            const count = document.getElementById('results-count');
+
+            tray.style.display = 'flex';
+            count.innerText = songs.length + ' টি গান পাওয়া গেছে';
+            list.innerHTML = '';
+
+            songs.forEach((song, idx) => {
+                const card = document.createElement('div');
+                card.className = 'song-card' + (idx === 0 ? ' active' : '');
+                card.id = 'song-card-' + idx;
+                card.onclick = () => {
+                    document.querySelectorAll('.song-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    playSelectedSong(song);
+                };
+
+                const imgUrl = song.artwork?.medium || song.artwork?.small || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200';
+                const artists = (song.artists || []).map(a => a.name).join(', ') || song.subtitle || 'Artist';
+
+                card.innerHTML = `
+                    <img src="${imgUrl}" alt="${song.title}" class="song-card-img" onerror="this.src='https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200'">
+                    <div class="song-card-title">${song.title}</div>
+                    <div class="song-card-artist">${artists}</div>
+                `;
+
+                list.appendChild(card);
+            });
+        }
+
+        // Play Selected Song from Search with HiFi Audio and Auto-Sync Lyrics
+        function playSelectedSong(song) {
+            activeSongData = song;
+            currentMode = 'audio';
+
+            if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
+                ytPlayer.stopVideo();
+            }
+
+            document.getElementById('yt-player-box').style.display = 'none';
+            document.getElementById('audio-player-box').style.display = 'flex';
+
+            document.getElementById('player-mode-icon').innerText = '🎵';
+            document.getElementById('player-mode-title').innerText = 'HiFi Audio Stream';
+
+            // Artwork & Metadata
+            const artUrl = song.artwork?.large || song.artwork?.medium || song.artwork?.small || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500';
+            document.getElementById('audio-album-art').src = artUrl;
+            document.getElementById('display-title').innerText = song.title;
+            const artists = (song.artists || []).map(a => a.name).join(', ') || song.subtitle || '';
+            document.getElementById('display-artist').innerText = artists;
+
+            document.getElementById('pill-provider').innerText = song.provider ? song.provider.toUpperCase() + '_HIFI' : 'SAAVN_HIFI';
+            document.getElementById('pill-lang').innerText = 'Lang: ' + (song.language || 'hi').toUpperCase();
+            document.getElementById('pill-cached').innerText = 'Direct HiFi Audio';
+
+            // Start Audio Playback
+            if (song.playback && song.playback.url) {
+                html5Audio.src = song.playback.url;
+                html5Audio.play().catch(e => console.warn(e));
+            }
+
+            // Fetch Synced Lyrics
+            const primaryArtist = (song.artists && song.artists[0]) ? song.artists[0].name : '';
+            let lyricsApiUrl = '/api/v1/lyrics/search?title=' + encodeURIComponent(song.title);
+            if (primaryArtist) lyricsApiUrl += '&artist=' + encodeURIComponent(primaryArtist);
+            if (song.duration) lyricsApiUrl += '&duration=' + song.duration;
+            if (song.playback && song.playback.url) lyricsApiUrl += '&audio_url=' + encodeURIComponent(song.playback.url);
+
+            fetchLyrics(lyricsApiUrl);
+        }
+
+        // Fetch Lyrics helper
+        async function fetchLyrics(apiUrl) {
+            try {
                 const res = await fetch(apiUrl);
                 const json = await res.json();
 
                 if (json.success && json.data) {
-                    // If backend recovered a typo in video ID, load the corrected video in player
-                    if (json.meta && json.meta.corrected_id) {
-                        const correctedId = json.meta.corrected_id;
-                        if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-                            ytPlayer.loadVideoById(correctedId);
-                        }
-                        const correctedUrl = 'https://youtu.be/' + correctedId;
-                        document.getElementById('song-input').value = correctedUrl;
-                        showNotice(`💡 লিঙ্ক অটো-কারেক্ট করা হয়েছে: "O" এর বদলে সংখ্যা "0" (${correctedId}) দিয়ে গান প্লে হচ্ছে!`);
-                    }
-
                     renderLyrics(json.data, json.meta);
-                    if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
-                        ytPlayer.playVideo();
-                    }
                 } else {
                     showError(json.error?.message || 'Lyrics not found');
                 }
             } catch (err) {
                 console.error(err);
-                showError('Could not connect to API server.');
-            } finally {
-                btn.innerHTML = '<span>Play & Sync Lyrics</span> <span>⚡</span>';
+                showError('Could not connect to Lyrics API.');
             }
         }
 
@@ -859,17 +1252,15 @@
             currentLyricsLines = data.lines || [];
             activeLyricIndex = -1;
 
-            // Update Track Metadata Title & Artist
-            const titleEl = document.getElementById('display-title');
-            const artistEl = document.getElementById('display-artist');
-            const resolvedTitle = meta?.title || data.title || (data.extra && data.extra.title);
-            const resolvedArtist = meta?.artist || data.artist || (data.extra && data.extra.artist);
+            // Update Track Metadata Title & Artist if not already updated by audio
+            if (currentMode === 'youtube') {
+                const titleEl = document.getElementById('display-title');
+                const artistEl = document.getElementById('display-artist');
+                const resolvedTitle = meta?.title || data.title || (data.extra && data.extra.title);
+                const resolvedArtist = meta?.artist || data.artist || (data.extra && data.extra.artist);
 
-            if (titleEl && resolvedTitle) {
-                titleEl.innerText = resolvedTitle;
-            }
-            if (artistEl && resolvedArtist) {
-                artistEl.innerText = resolvedArtist;
+                if (titleEl && resolvedTitle) titleEl.innerText = resolvedTitle;
+                if (artistEl && resolvedArtist) artistEl.innerText = resolvedArtist;
             }
 
             // Update Metadata Header
@@ -929,15 +1320,10 @@
             }
         }
 
-        function loadPreset(presetVal) {
-            document.getElementById('song-input').value = presetVal;
-            fetchAndDisplayLyrics(presetVal);
-        }
-
         document.getElementById('search-btn').addEventListener('click', () => {
             const inputVal = document.getElementById('song-input').value.trim();
             if (inputVal) {
-                fetchAndDisplayLyrics(inputVal);
+                handleSearchOrPlay(inputVal);
             }
         });
 
@@ -945,7 +1331,7 @@
             if (e.key === 'Enter') {
                 const inputVal = document.getElementById('song-input').value.trim();
                 if (inputVal) {
-                    fetchAndDisplayLyrics(inputVal);
+                    handleSearchOrPlay(inputVal);
                 }
             }
         });
@@ -963,8 +1349,10 @@
             const cs = Math.floor((ms % 1000) / 10);
             return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '.' + (cs < 10 ? '0' : '') + cs;
         }
+
         window.addEventListener('DOMContentLoaded', () => {
-            fetchAndDisplayLyrics('https://youtube.com/watch?v=8S2YggHf42s');
+            // Auto-load Kesariya as demonstration
+            handleSearchOrPlay('Kesariya');
         });
     </script>
 </body>
