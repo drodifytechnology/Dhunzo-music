@@ -1,0 +1,126 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c",
+    "name": "Dhunzo Music API",
+    "description": "Production API Collection for Dhunzo / BlackHole Music Search, Streaming, Trending, and Playlists.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/health",
+          "host": ["{{base_url}}"],
+          "path": ["api", "health"]
+        }
+      }
+    },
+    {
+      "name": "Search Music (Global)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/search?q=Kesariya&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "search"],
+          "query": [
+            { "key": "q", "value": "Kesariya" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Song Details by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/music/songs/3ymh_p8V",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "music", "songs", "3ymh_p8V"]
+        }
+      }
+    },
+    {
+      "name": "Trending Songs",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/music/trending?limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "music", "trending"],
+          "query": [
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/music/recommendations?song_id=3ymh_p8V",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "music", "recommendations"],
+          "query": [
+            { "key": "song_id", "value": "3ymh_p8V" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "YouTube Search",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/music/youtube/search?q=Arijit+Singh+Live",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "music", "youtube", "search"],
+          "query": [
+            { "key": "q", "value": "Arijit+Singh+Live" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Log Telemetry Fallback Event",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"timeout\",\n  \"target_provider\": \"jiosaavn\",\n  \"primary_endpoint\": \"/api/v1/search\",\n  \"query\": \"kesariya\",\n  \"latency_ms\": 3520\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/telemetry/fallback-event",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "telemetry", "fallback-event"]
+        }
+      }
+    }
+  ]
+}

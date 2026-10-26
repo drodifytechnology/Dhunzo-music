@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "updated_at": "2026-10-25T21:40:00Z",
+  "description": "Dhunzo Music Primary + GitHub Fallback Configuration",
+  "primary_api": {
+    "name": "Dhunzo Domain API",
+    "base_url": "http://10.0.2.2:8000",
+    "timeout_ms": 3500,
+    "enabled": true,
+    "endpoints": {
+      "search": "/api/v1/search?q={query}&limit={limit}",
+      "details": "/api/v1/music/songs/{id}",
+      "lyrics": "/api/v1/lyrics?title={title}&artist={artist}&duration={duration}",
+      "telemetry": "/api/v1/telemetry/fallback-event"
+    }
+  },
+  "failover_policy": {
+    "enabled": true,
+    "trigger_on_timeout": true,
+    "trigger_on_http_status": [404, 500, 502, 503, 504],
+    "trigger_on_empty_results": true,
+    "provider_priority": [
+      "jiosaavn",
+      "youtube"
+    ],
+    "cache_ttl_seconds": 3600
+  },
+  "providers": {
+    "jiosaavn": {
+      "name": "JioSaavn Direct Engine",
+      "enabled": true,
+      "priority": 1,
+      "timeout_ms": 4000,
+      "search_endpoint": "https://www.jiosaavn.com/api.php?__call=search.getResults&_marker=0&api_version=4&_format=json&p=1&n={limit}&q={query}&ctx=android",
+      "details_endpoint": "https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0&_format=json&pids={id}",
+      "image_quality": "500x500",
+      "stream_quality_options": [
+        "320kbps",
+        "160kbps",
+        "96kbps"
+      ],
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+      }
+    },
+    "youtube": {
+      "name": "YouTube Audio & Video Engine",
+      "enabled": true,
+      "priority": 2,
+      "timeout_ms": 5000,
+      "embed_player_url": "https://www.youtube.com/embed/{id}?autoplay=1&playsinline=1",
+      "web_watch_url": "https://www.youtube.com/watch?v={id}",
+      "search_instances": [
+        "https://api.piped.private.coffee",
+        "https://pipedapi.kavin.rocks"
+      ],
+      "search_path": "/search?q={query}&filter=music_songs",
+      "stream_path": "/streams/{id}",
+      "audio_stream_fallback": true
+    },
+    "lyrics": {
+      "name": "Synced Lyrics Fallback",
+      "enabled": true,
+      "lrclib_url": "https://lrclib.net/api/get?track_name={title}&artist_name={artist}&duration={duration}",
+      "lrclib_search_url": "https://lrclib.net/api/search?q={query}"
+    }
+  },
+  "telemetry": {
+    "enabled": true,
+    "endpoint": "http://10.0.2.2:8000/api/v1/telemetry/fallback-event",
+    "silent": true
+  }
+}

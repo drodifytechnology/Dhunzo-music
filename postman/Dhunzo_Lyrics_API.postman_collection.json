@@ -1,0 +1,79 @@
+{
+  "info": {
+    "_postman_id": "b2c3d4e5-f6a7-48b9-0c1d-2e3f4a5b6c7d",
+    "name": "Dhunzo Lyrics API",
+    "description": "Production API Collection for BlackHole / Dhunzo Multi-Provider Synced Lyrics and AI Speech-to-Text Fallback Engine.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Search Synced Lyrics (Standard)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lyrics/search?title=Believer&artist=Imagine+Dragons",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "lyrics", "search"],
+          "query": [
+            { "key": "title", "value": "Believer" },
+            { "key": "artist", "value": "Imagine+Dragons" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "AI Speech-to-Text Fallback (Bhojpuri Track)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lyrics/search?title=Lollypop+Lagelu&artist=Pawan+Singh",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "lyrics", "search"],
+          "query": [
+            { "key": "title", "value": "Lollypop+Lagelu" },
+            { "key": "artist", "value": "Pawan+Singh" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "AI Speech-to-Text Fallback with Audio URL",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lyrics/search?title=Kesariya&artist=Arijit+Singh&audio_url=https://example.com/audio.mp3",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "lyrics", "search"],
+          "query": [
+            { "key": "title", "value": "Kesariya" },
+            { "key": "artist", "value": "Arijit+Singh" },
+            { "key": "audio_url", "value": "https://example.com/audio.mp3" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Lyrics by ID or AI Hash",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lyrics/ai:7b5161f8dc71b23c3d7b3beba63e04bc",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "lyrics", "ai:7b5161f8dc71b23c3d7b3beba63e04bc"]
+        }
+      }
+    }
+  ]
+}

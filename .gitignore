@@ -1,0 +1,26 @@
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Backend Laravel ignores
+backend/vendor/
+backend/node_modules/
+backend/public/build/
+backend/public/hot/
+backend/public/storage
+backend/storage/*.key
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/.phpunit.result.cache
+backend/.phpunit.cache/
+backend/npm-debug.log
+backend/yarn-error.log
+
+# Database SQLite files (local instance)
+backend/database/*.sqlite
+backend/database/*.sqlite-journal
