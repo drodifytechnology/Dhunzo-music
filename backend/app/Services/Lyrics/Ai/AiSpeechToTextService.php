@@ -152,7 +152,7 @@ class AiSpeechToTextService
             'bhojpuri', 'pawan singh', 'khesari', 'khesari lal', 'shilpi raj', 'manoj tiwari',
             'ravi kishan', 'dinesh lal', 'nirahua', 'neelkamal', 'arvind akela', 'kallu',
             'pramod premi', 'ankush raja', 'bhojpuriya', 'kamar', 'kamariya', 'piya', 'choli',
-            'laika', 'lagelu', 'lollipop', 'lollypop', 'bhoji', 'bhatar', 'patna', 'bihar',
+            'laika', 'laiki', 'lagelu', 'lollipop', 'lollypop', 'bhoji', 'bhatar', 'patna', 'bihar',
             'chhotu', 'chhalia', 'chhaliya', 'hoth', 'lali', 'hothlali', 'othlali', 'kajra',
         ];
         foreach ($bhojpuriMarkers as $marker) {

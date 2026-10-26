@@ -36,6 +36,7 @@ class LyricsController extends Controller
         $audioUrl = $validated['audio_url'] ?? null;
         $youtubeUrl = $validated['url'] ?? ($validated['youtube_url'] ?? null);
 
+        $parsed = null;
         if (empty($title) && !empty($youtubeUrl)) {
             $parsed = $this->resolveYouTubeMetadata($youtubeUrl);
             $title = $parsed['title'] ?? null;
@@ -43,7 +44,7 @@ class LyricsController extends Controller
                 $artist = $parsed['artist'];
             }
             if (empty($audioUrl)) {
-                $audioUrl = $youtubeUrl;
+                $audioUrl = $parsed['corrected_url'] ?? $youtubeUrl;
             }
         }
 
@@ -69,12 +70,22 @@ class LyricsController extends Controller
             );
         }
 
+        $meta = [
+            'provider' => $lyrics->provider,
+            'type'     => $lyrics->type,
+            'title'    => $title,
+            'artist'   => $artist,
+        ];
+        if (!empty($parsed['corrected_id'])) {
+            $meta['corrected_id'] = $parsed['corrected_id'];
+        }
+        if (!empty($parsed['video_id'])) {
+            $meta['video_id'] = $parsed['video_id'];
+        }
+
         return ApiResponse::success(
             data: $lyrics,
-            meta: [
-                'provider' => $lyrics->provider,
-                'type'     => $lyrics->type,
-            ]
+            meta: $meta
         );
     }
 
@@ -109,9 +120,43 @@ class LyricsController extends Controller
     }
 
     /**
-     * Resolve YouTube video title and author via oEmbed API.
+     * Resolve YouTube video title and author via oEmbed API with typo recovery.
      */
     protected function resolveYouTubeMetadata(string $url): array
+    {
+        $meta = $this->fetchYouTubeOembed($url);
+        if (!empty($meta['title'])) {
+            return $meta;
+        }
+
+        // Fuzzy typo recovery: common confusion between 'O' and '0' in YouTube 11-char ID
+        if (preg_match('/(youtu\.be\/|v\/|watch\?v=|\/embed\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            $origId = $matches[2];
+            $candidates = [];
+            if (str_contains($origId, 'O')) {
+                $candidates[] = str_replace('O', '0', $origId);
+            }
+            if (str_contains($origId, '0')) {
+                $candidates[] = str_replace('0', 'O', $origId);
+            }
+            foreach ($candidates as $candId) {
+                $candUrl = str_replace($origId, $candId, $url);
+                $candMeta = $this->fetchYouTubeOembed($candUrl);
+                if (!empty($candMeta['title'])) {
+                    $candMeta['corrected_id'] = $candId;
+                    $candMeta['corrected_url'] = $candUrl;
+                    return $candMeta;
+                }
+            }
+        }
+
+        return ['title' => null, 'artist' => null];
+    }
+
+    /**
+     * Fetch YouTube oEmbed metadata for a specific URL.
+     */
+    protected function fetchYouTubeOembed(string $url): array
     {
         try {
             $oembedUrl = 'https://www.youtube.com/oembed?url=' . urlencode($url) . '&format=json';
@@ -121,7 +166,15 @@ class LyricsController extends Controller
                 $data = json_decode($json, true);
                 $rawTitle = $data['title'] ?? '';
                 $artist = $data['author_name'] ?? null;
-                if (str_contains($rawTitle, '-')) {
+                if (str_contains($rawTitle, '|')) {
+                    $parts = explode('|', $rawTitle);
+                    $songPart = trim($parts[0]);
+                    if (!empty(trim($parts[1] ?? ''))) {
+                        $artist = trim($parts[1]);
+                    }
+                    $cleanSong = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $songPart));
+                    if (!empty($cleanSong)) $rawTitle = $cleanSong;
+                } elseif (str_contains($rawTitle, '-')) {
                     $parts = explode('-', $rawTitle);
                     $songPart = trim($parts[0]);
                     $artistPart = trim(end($parts));
@@ -131,7 +184,20 @@ class LyricsController extends Controller
                 } else {
                     $rawTitle = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $rawTitle));
                 }
-                return ['title' => $rawTitle, 'artist' => $artist];
+                if ($artist) {
+                    $artist = trim(preg_replace('/\[.*?\]|\(.*?\)/', '', $artist));
+                }
+
+                $videoId = null;
+                if (preg_match('/(youtu\.be\/|v\/|watch\?v=|\/embed\/)([a-zA-Z0-9_-]{11})/', $url, $m)) {
+                    $videoId = $m[2];
+                }
+
+                return [
+                    'title'    => $rawTitle,
+                    'artist'   => $artist,
+                    'video_id' => $videoId,
+                ];
             }
         } catch (\Throwable $e) {}
 

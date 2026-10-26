@@ -528,10 +528,13 @@
                 </button>
             </div>
 
+            <div id="status-notice" style="display:none; padding: 0.6rem 1rem; border-radius: 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 0.85rem;"></div>
+
             <div class="presets">
                 <span>Quick Presets:</span>
+                <span class="preset-chip" onclick="loadPreset('https://youtu.be/D0YkgCt_MgA')">🔥 UP Wali Laiki (D0YkgCt_MgA)</span>
                 <span class="preset-chip" onclick="loadPreset('https://youtube.com/watch?v=8S2YggHf42s')">🎵 Hay Re Hoth Lali (Bhojpuri)</span>
-                <span class="preset-chip" onclick="loadPreset('Lollypop Lagelu')">🔥 Lollypop Lagelu (Pawan Singh)</span>
+                <span class="preset-chip" onclick="loadPreset('Lollypop Lagelu')">💃 Lollypop Lagelu (Pawan Singh)</span>
                 <span class="preset-chip" onclick="loadPreset('Believer Imagine Dragons')">⚡ Believer (LRCLIB)</span>
                 <span class="preset-chip" onclick="loadPreset('Kesariya Arijit Singh')">❤️ Kesariya (Hindi)</span>
             </div>
@@ -652,9 +655,40 @@
                 },
                 events: {
                     'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
                 }
             });
+        }
+
+        function onPlayerError(event) {
+            console.warn('YouTube Player error code:', event.data);
+            const syncInd = document.getElementById('sync-indicator');
+            if (syncInd) {
+                syncInd.innerHTML = '<span style="color:#f87171">⚠️ ইউটিউব ভিডিও লোড করা যায়নি (ত্রুটি ' + event.data + ')</span>';
+            }
+            const inputVal = document.getElementById('song-input').value.trim();
+            if (inputVal.includes('DOYkgCt_MgA')) {
+                const fixedUrl = inputVal.replace('DOYkgCt_MgA', 'D0YkgCt_MgA');
+                document.getElementById('song-input').value = fixedUrl;
+                showNotice('💡 ভুল লিঙ্ক শনাক্ত: ইংরেজি "O" এর বদলে সংখ্যা "0" (D0YkgCt_MgA) দিয়ে ভিডিও প্লে করা হচ্ছে!');
+                fetchAndDisplayLyrics(fixedUrl);
+            }
+        }
+
+        function showNotice(msg) {
+            const el = document.getElementById('status-notice');
+            if (el) {
+                el.innerText = msg;
+                el.style.display = 'block';
+            }
+        }
+
+        function hideNotice() {
+            const el = document.getElementById('status-notice');
+            if (el) {
+                el.style.display = 'none';
+            }
         }
 
         function onPlayerReady(event) {
@@ -764,25 +798,45 @@
         async function fetchAndDisplayLyrics(queryOrUrl) {
             const btn = document.getElementById('search-btn');
             btn.innerHTML = '<span>Loading...</span> <span>⏳</span>';
+            hideNotice();
 
-            const videoId = extractYouTubeId(queryOrUrl);
-            if (videoId && ytPlayer) {
+            // Auto-correct common letter 'O' vs digit '0' in YouTube ID client-side
+            let cleanQuery = queryOrUrl;
+            if (cleanQuery.includes('DOYkgCt_MgA')) {
+                cleanQuery = cleanQuery.replace('DOYkgCt_MgA', 'D0YkgCt_MgA');
+                document.getElementById('song-input').value = cleanQuery;
+                showNotice('💡 লিঙ্কে ইংরেজি "O" এর বদলে সংখ্যা "0" (D0YkgCt_MgA) কারেক্ট করা হয়েছে।');
+            }
+
+            const videoId = extractYouTubeId(cleanQuery);
+            if (videoId && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
                 ytPlayer.loadVideoById(videoId);
             }
 
             try {
                 let apiUrl = '/api/v1/lyrics/search?';
-                if (queryOrUrl.startsWith('http://') || queryOrUrl.startsWith('https://')) {
-                    apiUrl += 'url=' + encodeURIComponent(queryOrUrl);
+                if (cleanQuery.startsWith('http://') || cleanQuery.startsWith('https://')) {
+                    apiUrl += 'url=' + encodeURIComponent(cleanQuery);
                 } else {
-                    apiUrl += 'title=' + encodeURIComponent(queryOrUrl);
+                    apiUrl += 'title=' + encodeURIComponent(cleanQuery);
                 }
 
                 const res = await fetch(apiUrl);
                 const json = await res.json();
 
                 if (json.success && json.data) {
-                    renderLyrics(json.data);
+                    // If backend recovered a typo in video ID, load the corrected video in player
+                    if (json.meta && json.meta.corrected_id) {
+                        const correctedId = json.meta.corrected_id;
+                        if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+                            ytPlayer.loadVideoById(correctedId);
+                        }
+                        const correctedUrl = 'https://youtu.be/' + correctedId;
+                        document.getElementById('song-input').value = correctedUrl;
+                        showNotice(`💡 লিঙ্ক অটো-কারেক্ট করা হয়েছে: "O" এর বদলে সংখ্যা "0" (${correctedId}) দিয়ে গান প্লে হচ্ছে!`);
+                    }
+
+                    renderLyrics(json.data, json.meta);
                     if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
                         ytPlayer.playVideo();
                     }
@@ -797,13 +851,26 @@
             }
         }
 
-        function renderLyrics(data) {
+        function renderLyrics(data, meta = {}) {
             document.getElementById('empty-state').style.display = 'none';
             const container = document.getElementById('lyrics-lines-container');
             container.innerHTML = '';
 
             currentLyricsLines = data.lines || [];
             activeLyricIndex = -1;
+
+            // Update Track Metadata Title & Artist
+            const titleEl = document.getElementById('display-title');
+            const artistEl = document.getElementById('display-artist');
+            const resolvedTitle = meta?.title || data.title || (data.extra && data.extra.title);
+            const resolvedArtist = meta?.artist || data.artist || (data.extra && data.extra.artist);
+
+            if (titleEl && resolvedTitle) {
+                titleEl.innerText = resolvedTitle;
+            }
+            if (artistEl && resolvedArtist) {
+                artistEl.innerText = resolvedArtist;
+            }
 
             // Update Metadata Header
             document.getElementById('pill-provider').innerText = data.provider || 'ai_speech_to_text';
