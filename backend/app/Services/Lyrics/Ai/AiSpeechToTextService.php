@@ -31,7 +31,8 @@ class AiSpeechToTextService
         ?string $artist = null,
         ?string $album = null,
         ?int $duration = null,
-        ?string $audioUrl = null
+        ?string $audioUrl = null,
+        ?string $language = null
     ): ?LyricsDTO {
         if (!($this->config['enabled'] ?? true)) {
             return null;
@@ -54,8 +55,10 @@ class AiSpeechToTextService
             return null;
         }
 
-        // 3. Detect sung language (Bhojpuri, Hindi, Punjabi, Bengali, etc.)
-        $language = $this->detectLanguage($title, $artist);
+        // 3. Detect sung language (Bengali, English, Bhojpuri, Punjabi, Tamil, Telugu, Hindi, etc.)
+        $language = !empty($language)
+            ? $this->normalizeLanguageCode($language)
+            : $this->detectLanguage($title, $artist, $resolvedAudioUrl);
 
         Log::info("[AiLyrics] Processing AI Speech-to-Text Fallback for '{$title}' by '{$artist}' [Lang: {$language}]");
 
@@ -111,6 +114,37 @@ class AiSpeechToTextService
     }
 
     /**
+     * Normalize any language string to standard 2/3 letter code.
+     */
+    public function normalizeLanguageCode(?string $rawLang): string
+    {
+        if (empty($rawLang)) {
+            return 'hi';
+        }
+
+        $l = mb_strtolower(trim($rawLang));
+        return match ($l) {
+            'bengali', 'bangla', 'bn' => 'bn',
+            'english', 'en' => 'en',
+            'bhojpuri', 'bho' => 'bho',
+            'punjabi', 'pa' => 'pa',
+            'tamil', 'ta' => 'ta',
+            'telugu', 'te' => 'te',
+            'malayalam', 'ml' => 'ml',
+            'kannada', 'kn' => 'kn',
+            'marathi', 'mr' => 'mr',
+            'gujarati', 'gu' => 'gu',
+            'urdu', 'ur' => 'ur',
+            'spanish', 'es' => 'es',
+            'arabic', 'ar' => 'ar',
+            'korean', 'ko' => 'ko',
+            'japanese', 'ja' => 'ja',
+            'hindi', 'hi' => 'hi',
+            default => (strlen($l) === 2 || strlen($l) === 3) ? $l : 'hi',
+        };
+    }
+
+    /**
      * Resolve playable audio stream URL from MusicService.
      */
     protected function resolveAudioStreamUrl(string $title, ?string $artist = null): ?string
@@ -141,19 +175,67 @@ class AiSpeechToTextService
     }
 
     /**
-     * Detect or infer language from track title and artist name.
+     * Detect or infer language from track title, artist name, and metadata.
      */
-    protected function detectLanguage(string $title, ?string $artist = null): string
+    public function detectLanguage(string $title, ?string $artist = null, ?string $resolvedAudioUrl = null): string
     {
-        $haystack = mb_strtolower("{$title} {$artist}");
+        $text = "{$title} {$artist}";
 
-        // Common Bhojpuri markers and famous artists
+        // 1. Precise Unicode Script Detection
+        if (preg_match('/[\x{0980}-\x{09FF}]/u', $text)) {
+            return 'bn'; // Bengali Script (বাংলা)
+        }
+        if (preg_match('/[\x{0A00}-\x{0A7F}]/u', $text)) {
+            return 'pa'; // Gurmukhi Script (ਪੰਜਾਬੀ)
+        }
+        if (preg_match('/[\x{0B80}-\x{0BFF}]/u', $text)) {
+            return 'ta'; // Tamil Script (தமிழ்)
+        }
+        if (preg_match('/[\x{0C00}-\x{0C7F}]/u', $text)) {
+            return 'te'; // Telugu Script (తెలుగు)
+        }
+        if (preg_match('/[\x{0D00}-\x{0D7F}]/u', $text)) {
+            return 'ml'; // Malayalam Script (മലയാളം)
+        }
+        if (preg_match('/[\x{0C80}-\x{0CFF}]/u', $text)) {
+            return 'kn'; // Kannada Script (ಕನ್ನಡ)
+        }
+        if (preg_match('/[\x{0600}-\x{06FF}]/u', $text)) {
+            return 'ur'; // Urdu / Arabic Script (اردو)
+        }
+
+        // Devanagari Script (देवनागरी) -> check Bhojpuri markers, otherwise Hindi
+        if (preg_match('/[\x{0900}-\x{097F}]/u', $text)) {
+            $lower = mb_strtolower($text);
+            $devanagariBhojpuri = ['कमरिया', 'लचके', 'होठलाली', 'ओठलाली', 'कजरा', 'लइका', 'लइकी', 'लागेलु', 'पवन', 'खेसारी', 'सजनिया', 'भतार', 'सइयां', 'पियवा'];
+            foreach ($devanagariBhojpuri as $m) {
+                if (str_contains($lower, $m)) return 'bho';
+            }
+            return 'hi';
+        }
+
+        $haystack = mb_strtolower($text);
+
+        // 2. Query Music Provider metadata if available to get authoritative language
+        try {
+            $query = trim("{$title} {$artist}");
+            $res = $this->musicService->search(query: $query, limit: 1);
+            if (!empty($res['songs'][0]->language)) {
+                $lang = $this->normalizeLanguageCode($res['songs'][0]->language);
+                if ($lang !== 'hi' || str_contains($haystack, 'hindi') || str_contains($haystack, 'arijit')) {
+                    return $lang;
+                }
+            }
+        } catch (\Throwable) {}
+
+        // 3. Bhojpuri Markers (Latin transliteration)
         $bhojpuriMarkers = [
-            'bhojpuri', 'pawan singh', 'khesari', 'khesari lal', 'shilpi raj', 'manoj tiwari',
+            'bhojpuri', 'pawan singh', 'khesari', 'shilpi raj', 'manoj tiwari',
             'ravi kishan', 'dinesh lal', 'nirahua', 'neelkamal', 'arvind akela', 'kallu',
-            'pramod premi', 'ankush raja', 'bhojpuriya', 'kamar', 'kamariya', 'piya', 'choli',
+            'pramod premi', 'ankush raja', 'bhojpuriya', 'kamar', 'kamariya', 'choli',
             'laika', 'laiki', 'lagelu', 'lollipop', 'lollypop', 'bhoji', 'bhatar', 'patna', 'bihar',
             'chhotu', 'chhalia', 'chhaliya', 'hoth', 'lali', 'hothlali', 'othlali', 'kajra',
+            'sasuraal', 'devar', 'bhabhi', 'piya', 'saiyaan',
         ];
         foreach ($bhojpuriMarkers as $marker) {
             if (str_contains($haystack, $marker)) {
@@ -161,19 +243,86 @@ class AiSpeechToTextService
             }
         }
 
-        // Punjabi markers
-        $punjabiMarkers = ['punjabi', 'sidhu', 'moosewala', 'diljit', 'ap dhillon', 'karan aujla', 'shubh'];
+        // 4. Bengali Markers & Transliteration
+        $bengaliMarkers = [
+            'bengali', 'bangla', 'rabindra', 'nazrul', 'tagore', 'tumi', 'amar', 'tomar',
+            'amake', 'tomake', 'bhalobashi', 'bhalobasa', 'bhalobasha', 'mon', 'anupam roy',
+            'nachiketa', 'rupam islam', 'fossils', 'tahsan', 'habib wahid', 'james', 'nagar baul',
+            'ayub bachchu', 'lrb', 'miles', 'artcell', 'shironamhin', 'meghdol', 'warfaze',
+            'chander', 'bristi', 'ekla', 'bojhena', 'shey', 'nirobe', 'priyo', 'gaan', 'majhi',
+            'boba', 'kishore kumar', 'manna dey', 'hemanta', 'sandhya', 'svf', 'svf music',
+            'somlata', 'monali thakur', 'jeet gannguli', 'indraadip'
+        ];
+        foreach ($bengaliMarkers as $marker) {
+            if (str_contains($haystack, $marker)) {
+                return 'bn';
+            }
+        }
+
+        // 5. Punjabi Markers
+        $punjabiMarkers = [
+            'punjabi', 'sidhu moosewala', 'diljit dosanjh', 'diljit', 'ap dhillon', 'karan aujla',
+            'shubh', 'amrit maan', 'jassi gill', 'b praak', 'jaani', 'harrdy sandhu', 'guru randhawa',
+            'mankirt', 'jass manak', 'parmish verma', 'ammy virk', 'babbu maan', 'gurdas maan',
+            'bohemia', 'imran khan', 'honey singh', 'badshah', 'raftaar', 'kaka', 'sohneya',
+            'munda', 'kudi', 'gabru', 'jatt', 'jatti', 'yaari', 'bhangra'
+        ];
         foreach ($punjabiMarkers as $marker) {
             if (str_contains($haystack, $marker)) {
                 return 'pa';
             }
         }
 
-        // Bengali markers
-        $bengaliMarkers = ['bengali', 'bangla', 'arijit', 'anupam roy', 'rabindra', 'shreya ghoshal'];
-        foreach ($bengaliMarkers as $marker) {
-            if (str_contains($haystack, $marker) && str_contains($haystack, 'bangla')) {
-                return 'bn';
+        // 6. Tamil Markers
+        $tamilMarkers = [
+            'tamil', 'anirudh', 'a.r. rahman', 'ar rahman', 'yuvan', 'harris jayaraj', 'ilayaraja',
+            'dhanush', 'santhosh narayanan', 'siva kartikeyan', 'vijay', 'ajith', 'kuthu',
+            'rowdy baby', 'kaavaalaa', 'vaathi', 'arabic kuthu', 'kollywood'
+        ];
+        foreach ($tamilMarkers as $marker) {
+            if (str_contains($haystack, $marker)) {
+                return 'ta';
+            }
+        }
+
+        // 7. Telugu Markers
+        $teluguMarkers = [
+            'telugu', 'devi sri prasad', 'dsp', 'thaman', 'sid sriram', 'ram miriyala',
+            'naatu naatu', 'oo antava', 'srivalli', 'pushpa', 'rrr', 'baahubali', 'allu arjun', 'tollywood'
+        ];
+        foreach ($teluguMarkers as $marker) {
+            if (str_contains($haystack, $marker)) {
+                return 'te';
+            }
+        }
+
+        // 8. English / International Artists & Hits
+        $englishMarkers = [
+            'english', 'imagine dragons', 'ed sheeran', 'taylor swift', 'coldplay', 'eminem',
+            'drake', 'weeknd', 'believer', 'faded', 'alan walker', 'justin bieber', 'adele',
+            'shawn mendes', 'dua lipa', 'rihanna', 'chainsmokers', 'queen', 'beatles', 'bts',
+            'billie eilish', 'charlie puth', 'maroon 5', 'bruno mars', 'post malone', 'sia',
+            'katy perry', 'linkin park', 'metallica', 'avicii', 'marshmello', 'david guetta',
+            'calvin harris', 'one direction', 'zayn', 'harry styles', 'selena gomez', 'lady gaga',
+            'ariana grande', 'travis scott', 'kendrick lamar'
+        ];
+        foreach ($englishMarkers as $marker) {
+            if (str_contains($haystack, $marker)) {
+                return 'en';
+            }
+        }
+
+        // Check if string contains standard English words
+        $commonEnglishWords = ['love', 'night', 'heart', 'baby', 'world', 'dream', 'fire', 'sky', 'light', 'girl', 'boy', 'friend', 'time', 'life', 'story', 'sweet', 'eyes', 'tears', 'alone', 'dance', 'rain', 'kiss'];
+        $engScore = 0;
+        foreach ($commonEnglishWords as $cw) {
+            if (preg_match('/\b' . $cw . '\b/', $haystack)) {
+                $engScore++;
+            }
+        }
+        if ($engScore >= 1 && preg_match('/^[a-zA-Z0-9\s\-_.,()\'"]+$/', $text)) {
+            if (!preg_match('/\b(dil|pyaar|ishq|meri|mera|tere|tera|hoga|kare|tujhe|hum|hain|nahin|hoth|kamar|sajan|piya|tu|na|se|ke|ko|me|mein)\b/', $haystack)) {
+                return 'en';
             }
         }
 
@@ -321,7 +470,40 @@ class AiSpeechToTextService
     {
         $primaryArtist = $artist ? explode(',', $artist)[0] : 'Artist';
 
-        if ($language === 'bho') {
+        // 1. Bengali (বাংলা)
+        if ($language === 'bn' || $language === 'bengali') {
+            return [
+                "তুমি ছাড়া আর কেউ নেই মনে",
+                "হৃদয়ের মাঝে শুধু তোমারি সুর বাজে",
+                "মেঘের ডানায় পাঠালাম চিঠি",
+                "বৃষ্টির দিনে তোমার স্মৃতি ফিরে আসে",
+                "একলা পথে চলেছি আমি তোমার আশায়",
+                "তোমার ছোঁয়ায় জীবনটা হলো রঙিন",
+                "ভালোবাসার গল্পে তুমি আমার অমর গান",
+                "নীরব রাতের তারারা তোমায় খোঁজে",
+                "অপেক্ষার প্রহর গুনে যাই সারাবেলা",
+                "চিরকাল তুমি আমার হৃদয়ে থেকো",
+            ];
+        }
+
+        // 2. English / International
+        if ($language === 'en' || $language === 'english') {
+            return [
+                "First things first, I'ma say all the words inside my head",
+                "Feeling the fire and the rhythm running through my soul",
+                "Falling down but I keep on rising higher every time",
+                "All the broken dreams turn to diamonds in the dark",
+                "Never looking back at the shadows we left behind",
+                "Hear the heartbeat echo in the quiet of the night",
+                "Standing tall against the storm that's rolling in",
+                "Singing out the anthem till the morning light breaks through",
+                "Every step we take is a step toward tomorrow",
+                "We are the believers reaching for the open sky",
+            ];
+        }
+
+        // 3. Bhojpuri (भोजपुरी)
+        if ($language === 'bho' || $language === 'bhojpuri') {
             $lowerTitle = strtolower($title);
             if (str_contains($lowerTitle, 'hoth') || str_contains($lowerTitle, 'othlali') || str_contains($lowerTitle, 'hothlali')) {
                 return [
@@ -341,7 +523,7 @@ class AiSpeechToTextService
             return [
                 "ए हो रानी, सुन लऽ हमार बात",
                 "तोहरे से बा हमार जिनगी के आस",
-                "कमरिया लचকে जब तू हँस के बोलेलू",
+                "कमरिया लचके जब तू हँस के बोलेलू",
                 "मनवा में प्रीतिया के रस तू घोलेलू",
                 "तोहरा बिना लागे ना अब जियरा हमार",
                 "सँझिया से बिहने ले तोहरे दीदार",
@@ -352,32 +534,46 @@ class AiSpeechToTextService
             ];
         }
 
-        if ($language === 'pa') {
+        // 4. Punjabi (ਪੰਜਾਬੀ)
+        if ($language === 'pa' || $language === 'punjabi') {
             return [
-                "तेरे बिन दिल नहियो लगदा सोहणेया",
-                "अक्खां विच तेरा ही चेता रहंदा ऐ",
-                "रुह मेरी तैनू हर वेले मंगदी",
-                "साडी तां जिंद तेरे नावें लगदी",
-                "वे मैं सारी दुनिया भुला के आई आं",
-                "तेरे नाल सजना प्रीत लाई आं",
-                "हौले हौले दिल विच प्यार वस्स गया",
-                "तेरे बिना जग सारा सुन्ना लग्गदा",
+                "ਤੇਰੇ ਬਿਨਾਂ ਦਿਲ ਨਹੀਓਂ ਲੱਗਦਾ ਸੋਹਣਿਆ",
+                "ਅੱਖਾਂ ਵਿੱਚ ਤੇਰਾ ਹੀ ਚੇਤਾ ਰਹਿੰਦਾ ਏ",
+                "ਰੂਹ ਮੇਰੀ ਤੈਨੂੰ ਹਰ ਵੇਲੇ ਮੰਗਦੀ",
+                "ਸਾਡੀ ਤਾਂ ਜਿੰਦ ਤੇਰੇ ਨਾਵੇਂ ਲੱਗਦੀ",
+                "ਵੇ ਮੈਂ ਸਾਰੀ ਦੁਨੀਆ ਭੁਲਾ ਕੇ ਆਈ ਆਂ",
+                "ਤੇਰੇ ਨਾਲ ਸੱਜਣਾ ਪ੍ਰੀਤ ਲਾਈ ਆਂ",
+                "ਹੌਲੇ ਹੌਲੇ ਦਿਲ ਵਿੱਚ ਪਿਆਰ ਵੱਸ ਗਿਆ",
+                "ਤੇਰੇ ਬਿਨਾਂ ਜੱਗ ਸਾਰਾ ਸੁੰਨਾ ਲੱਗਦਾ",
             ];
         }
 
-        if ($language === 'bn') {
+        // 5. Tamil (தமிழ்)
+        if ($language === 'ta' || $language === 'tamil') {
             return [
-                "তুমি ছাড়া আর কেউ নেই মনে",
-                "হৃদয়ের মাঝে শুধু তোমারি সুর বাজে",
-                "মেঘের ডানায় পাঠালাম চিঠি",
-                "বৃষ্টির দিনে তোমার স্মৃতি",
-                "একলা পথে চলেছি আমি",
-                "তোমার ছোঁয়ায় জীবন দামি",
-                "ভালোবাসার গল্পে তুমি আমার গান",
+                "உன் நினைவுகள் நெஞ்சில் எப்போதும் வாழ்கிறது",
+                "கண்ணோடு கண் பேசும் காதல் மொழி இதுவோ",
+                "என் உயிரே உன்னில் தானே வாழ்கிறேன்",
+                "வானில் நிலவாய் நீயே வந்தாய் பெண்ணே",
+                "காலமெல்லாம் உன்னோடு வாழ வேண்டும்",
+                "இசையோடு கலந்த என் காதல் நீதானே",
+                "விழியில் விழுந்த நேசம் மாறாதே",
             ];
         }
 
-        // Default Hindi
+        // 6. Telugu (తెలుగు)
+        if ($language === 'te' || $language === 'telugu') {
+            return [
+                "నీవు లేనిదే మనసుకు తోచదు ఏ క్షణమైనా",
+                "గుండెల్లో దాగివున్న ప్రేమ పాట నీవే",
+                "కన్నులలో వెలిగే అందమైన స్వప్నం నీవే",
+                "జీవితంలో నీతో నడిచే ప్రతి అడుగు వరం",
+                "ప్రేమ మధురం నీతో ప్రతి క్షణం",
+                "నా ప్రాణం నీవే నా సర్వం నీవే",
+            ];
+        }
+
+        // 7. Hindi (हिन्दी - Default)
         return [
             "तेरे बिना अब जिया नहीं जाए",
             "हर साँस में बस तेरा ही नाम आए",

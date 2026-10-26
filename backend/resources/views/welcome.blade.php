@@ -1168,8 +1168,19 @@
 
                 if (json.success && json.data && json.data.length > 0) {
                     renderSearchResults(json.data, reqSeq);
-                    // Automatically auto-play top match!
-                    playSelectedSong(json.data[0], reqSeq);
+                    // Smart top match selection: prioritize clean vocal tracks over unintended instrumentals
+                    let chosen = json.data[0];
+                    const cleanQ = query.toLowerCase().trim();
+                    for (const s of json.data) {
+                        const sTitle = (s.title || '').toLowerCase();
+                        if (sTitle === cleanQ || sTitle.startsWith(cleanQ + ' ') || sTitle.includes(cleanQ)) {
+                            if (!sTitle.includes('instrumental') || cleanQ.includes('instrumental')) {
+                                chosen = s;
+                                break;
+                            }
+                        }
+                    }
+                    playSelectedSong(chosen, reqSeq);
                 } else {
                     // If Saavn search has no audio, search lyrics directly
                     document.getElementById('search-results-tray').style.display = 'none';
@@ -1241,8 +1252,9 @@
 
             lastResolvedMeta = { title: song.title, artist: artists };
 
+            const songLang = (song.language || 'bn').toUpperCase();
             document.getElementById('pill-provider').innerText = song.provider ? song.provider.toUpperCase() + '_HIFI' : 'SAAVN_HIFI';
-            document.getElementById('pill-lang').innerText = 'Lang: ' + (song.language || 'hi').toUpperCase();
+            document.getElementById('pill-lang').innerText = 'Lang: ' + songLang;
             document.getElementById('pill-cached').innerText = 'Direct HiFi Audio';
 
             // Start Audio Playback
@@ -1260,6 +1272,7 @@
             if (primaryArtist) lyricsApiUrl += '&artist=' + encodeURIComponent(primaryArtist);
             if (song.duration) lyricsApiUrl += '&duration=' + song.duration;
             if (song.playback && song.playback.url) lyricsApiUrl += '&audio_url=' + encodeURIComponent(song.playback.url);
+            if (song.language) lyricsApiUrl += '&language=' + encodeURIComponent(song.language);
 
             fetchLyrics(lyricsApiUrl, reqSeq);
         }
@@ -1314,8 +1327,9 @@
             }
 
             // Update Metadata Header
+            const detectedLang = (data.language || meta?.language || (activeSongData ? activeSongData.language : 'bn')).toUpperCase();
             document.getElementById('pill-provider').innerText = (data.provider || 'ai_speech_to_text').toUpperCase();
-            document.getElementById('pill-lang').innerText = 'LANG: ' + (data.language || 'hi').toUpperCase();
+            document.getElementById('pill-lang').innerText = 'LANG: ' + detectedLang;
             document.getElementById('pill-cached').innerText = data.extra?.persisted_db ? 'SAVED IN DB (FAST)' : (currentMode === 'audio' ? 'DIRECT HIFI AUDIO' : 'AI TRANSCRIBED');
 
             // Populate Karaoke Lines

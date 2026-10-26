@@ -35,7 +35,8 @@ class LyricsService
         ?string $artist = null,
         ?string $album = null,
         ?int $duration = null,
-        ?string $audioUrl = null
+        ?string $audioUrl = null,
+        ?string $language = null
     ): ?LyricsDTO {
         $hash = GeneratedLyric::computeHash($title, $artist);
         $cacheKey = "dhunzo:lyrics:search:{$hash}";
@@ -74,6 +75,21 @@ class LyricsService
             $lyrics = $this->resolver->resolve($title, $artist, $album, $duration);
 
             if ($lyrics !== null) {
+                // If provider did not set language, infer it from lyrics content, metadata, or hint
+                if (empty($lyrics->language)) {
+                    $inferred = $this->inferLanguage($lyrics, $language, $title, $artist);
+                    $lyrics = new LyricsDTO(
+                        id: $lyrics->id,
+                        provider: $lyrics->provider,
+                        type: $lyrics->type,
+                        lines: $lyrics->lines,
+                        language: $inferred,
+                        raw: $lyrics->raw,
+                        score: $lyrics->score,
+                        extra: array_merge($lyrics->extra ?? [], ['language' => $inferred])
+                    );
+                }
+
                 Cache::put($cacheKey, $lyrics->toArray(), $this->cacheTtl);
                 return $lyrics;
             }
@@ -86,7 +102,8 @@ class LyricsService
                 artist: $artist,
                 album: $album,
                 duration: $duration,
-                audioUrl: $audioUrl
+                audioUrl: $audioUrl,
+                language: $language
             );
 
             if ($aiLyrics !== null) {
@@ -98,6 +115,49 @@ class LyricsService
         // Cache negative result
         Cache::put($negativeKey, true, $this->negativeCacheTtl);
         return null;
+    }
+
+    /**
+     * Infer language from lyrics text, metadata, or fallback hint.
+     */
+    protected function inferLanguage(LyricsDTO $lyrics, ?string $fallbackHint = null, ?string $title = null, ?string $artist = null): string
+    {
+        if (!empty($fallbackHint)) {
+            return $this->aiSpeechToTextService->normalizeLanguageCode($fallbackHint);
+        }
+
+        $sampleText = '';
+        foreach (array_slice($lyrics->lines ?? [], 0, 10) as $line) {
+            $sampleText .= ' ' . ($line['text'] ?? '');
+        }
+        if (empty($sampleText) && !empty($lyrics->raw)) {
+            $sampleText = mb_substr($lyrics->raw, 0, 500);
+        }
+
+        // Unicode script check
+        if (preg_match('/[\x{0980}-\x{09FF}]/u', $sampleText)) return 'bn';
+        if (preg_match('/[\x{0A00}-\x{0A7F}]/u', $sampleText)) return 'pa';
+        if (preg_match('/[\x{0B80}-\x{0BFF}]/u', $sampleText)) return 'ta';
+        if (preg_match('/[\x{0C00}-\x{0C7F}]/u', $sampleText)) return 'te';
+        if (preg_match('/[\x{0D00}-\x{0D7F}]/u', $sampleText)) return 'ml';
+        if (preg_match('/[\x{0C80}-\x{0CFF}]/u', $sampleText)) return 'kn';
+        if (preg_match('/[\x{0600}-\x{06FF}]/u', $sampleText)) return 'ur';
+        if (preg_match('/[\x{0900}-\x{097F}]/u', $sampleText)) return 'hi';
+
+        // Check common English words
+        $lower = mb_strtolower($sampleText);
+        $enHits = 0;
+        foreach (['the', 'you', 'and', 'that', 'with', 'for', 'love', 'know', 'feel', 'can', 'see', 'me', 'my', 'all', 'words', 'head'] as $w) {
+            if (preg_match('/\b' . $w . '\b/', $lower)) $enHits++;
+        }
+        if ($enHits >= 2) return 'en';
+
+        // Check title and artist metadata using detectLanguage
+        if (!empty($title)) {
+            return $this->aiSpeechToTextService->detectLanguage($title, $artist);
+        }
+
+        return 'hi';
     }
 
     /**
@@ -120,8 +180,9 @@ class LyricsService
         $primaryArtist = !empty($song->artists[0]['name']) ? $song->artists[0]['name'] : null;
         $albumTitle = $song->album['title'] ?? null;
         $audioUrl = $song->playback['url'] ?? $song->playback['embed_url'] ?? null;
+        $songLang = $song->language ?? null;
 
-        $lyrics = $this->search($song->title, $primaryArtist, $albumTitle, $song->duration, $audioUrl);
+        $lyrics = $this->search($song->title, $primaryArtist, $albumTitle, $song->duration, $audioUrl, $songLang);
 
         if ($lyrics) {
             Cache::put($cacheKey, $lyrics->toArray(), $this->cacheTtl);

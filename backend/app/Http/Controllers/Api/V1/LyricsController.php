@@ -28,6 +28,7 @@ class LyricsController extends Controller
             'duration'    => 'nullable|integer|min:1',
             'duration_ms' => 'nullable|integer|min:1',
             'audio_url'   => 'nullable|url|max:1024',
+            'language'    => 'nullable|string|max:50',
         ]);
 
         $title = $validated['title'] ?? null;
@@ -35,6 +36,7 @@ class LyricsController extends Controller
         $album = $validated['album'] ?? null;
         $audioUrl = $validated['audio_url'] ?? null;
         $youtubeUrl = $validated['url'] ?? ($validated['youtube_url'] ?? null);
+        $language = $validated['language'] ?? null;
 
         $parsed = null;
         if (empty($title) && !empty($youtubeUrl)) {
@@ -60,7 +62,7 @@ class LyricsController extends Controller
             ? (int) $validated['duration']
             : (isset($validated['duration_ms']) ? (int) round($validated['duration_ms'] / 1000) : null);
 
-        $lyrics = $this->lyricsService->search($title, $artist, $album, $duration, $audioUrl);
+        $lyrics = $this->lyricsService->search($title, $artist, $album, $duration, $audioUrl, $language);
 
         if (!$lyrics) {
             return ApiResponse::error(
@@ -73,6 +75,7 @@ class LyricsController extends Controller
         $meta = [
             'provider' => $lyrics->provider,
             'type'     => $lyrics->type,
+            'language' => $lyrics->language,
             'title'    => $title,
             'artist'   => $artist,
         ];
