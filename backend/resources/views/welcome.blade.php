@@ -554,6 +554,17 @@
                 <div id="youtube-player-frame"></div>
             </div>
 
+            <!-- Prominent Play & Sync Action Button -->
+            <div style="padding: 1rem 1.5rem 0.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                <button class="btn-primary" id="btn-play-trigger" onclick="playNowAndSync()" style="width: 100%; justify-content: center; font-size: 1.05rem; padding: 1rem;">
+                    <span>▶ গান প্লে করুন ও রিয়েল-টাইম লিরিক্স দেখুন</span>
+                </button>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+                    <span>💡 টিপস: লিরিক্সের যেকোনো লাইনে ক্লিক করলে গান সেখানে চলে যাবে</span>
+                    <span id="sync-indicator" style="color: #10b981;">● সিঙ্ক প্রস্তুত</span>
+                </div>
+            </div>
+
             <div class="track-metadata">
                 <div class="track-title" id="display-title">Hay Re Hoth Lali [Bhojpuri Superhit]</div>
                 <div class="track-artist" id="display-artist">Chhotu Chhalia • T-Series Hamaar Bhojpuri</div>
@@ -652,10 +663,34 @@
         }
 
         function onPlayerStateChange(event) {
+            const playBtn = document.getElementById('btn-play-trigger');
+            const syncInd = document.getElementById('sync-indicator');
             if (event.data === YT.PlayerState.PLAYING) {
+                if (playBtn) playBtn.innerHTML = '<span>⏸ পজ করুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#10b981">● গান বাজছে ও লিরিক্স সিঙ্ক হচ্ছে</span>';
                 startSyncLoop();
+                if (!currentLyricsLines || currentLyricsLines.length === 0) {
+                    const inputVal = document.getElementById('song-input').value.trim();
+                    fetchAndDisplayLyrics(inputVal || 'https://youtube.com/watch?v=8S2YggHf42s');
+                }
             } else {
+                if (playBtn) playBtn.innerHTML = '<span>▶ গান প্লে করুন ও রিয়েল-টাইম লিরিক্স দেখুন</span>';
+                if (syncInd) syncInd.innerHTML = '<span style="color:#94a3b8">○ পজ করা হয়েছে</span>';
                 stopSyncLoop();
+            }
+        }
+
+        function playNowAndSync() {
+            if (!ytPlayer) return;
+            const state = (typeof ytPlayer.getPlayerState === 'function') ? ytPlayer.getPlayerState() : -1;
+            if (state === YT.PlayerState.PLAYING) {
+                ytPlayer.pauseVideo();
+            } else {
+                ytPlayer.playVideo();
+                if (!currentLyricsLines || currentLyricsLines.length === 0) {
+                    const inputVal = document.getElementById('song-input').value.trim();
+                    fetchAndDisplayLyrics(inputVal || 'https://youtube.com/watch?v=8S2YggHf42s');
+                }
             }
         }
 
@@ -748,6 +783,9 @@
 
                 if (json.success && json.data) {
                     renderLyrics(json.data);
+                    if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
+                        ytPlayer.playVideo();
+                    }
                 } else {
                     showError(json.error?.message || 'Lyrics not found');
                 }
@@ -858,6 +896,9 @@
             const cs = Math.floor((ms % 1000) / 10);
             return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '.' + (cs < 10 ? '0' : '') + cs;
         }
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchAndDisplayLyrics('https://youtube.com/watch?v=8S2YggHf42s');
+        });
     </script>
 </body>
 </html>
