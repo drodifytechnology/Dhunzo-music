@@ -11,7 +11,7 @@ This directory contains the remote JSON configuration (`dhunzo_fallback_config.j
 2. **GitHub Raw CDN Hosting**:
    The Flutter app fetches this configuration over HTTPS from GitHub Raw:
    ```http
-   GET https://raw.githubusercontent.com/<org>/music_api/main/config-fallback/dhunzo_fallback_config.json
+   GET https://raw.githubusercontent.com/drodifytechnology/Dhunzo-music/main/config-fallback/dhunzo_fallback_config.json
    ```
 3. **Local & CDN Caching**:
    The Flutter client caches this JSON locally for **3600 seconds (1 hour)** to minimize bandwidth and latency while ensuring fallback availability even when offline.

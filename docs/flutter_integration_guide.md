@@ -10,7 +10,7 @@ At app startup (or once every 60 minutes), fetch and cache `dhunzo_fallback_conf
 
 ```dart
 Future<Map<String, dynamic>> fetchRemoteFallbackConfig() async {
-  const configUrl = 'https://raw.githubusercontent.com/<org>/music_api/main/config-fallback/dhunzo_fallback_config.json';
+  const configUrl = 'https://raw.githubusercontent.com/drodifytechnology/Dhunzo-music/main/config-fallback/dhunzo_fallback_config.json';
   
   try {
     final response = await http.get(Uri.parse(configUrl)).timeout(const Duration(seconds: 4));
